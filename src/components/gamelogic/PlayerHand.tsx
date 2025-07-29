@@ -27,43 +27,47 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
   const [animatingTile, setAnimatingTile] = useState<string | null>(null);
 
   const handleTileClick = (tile: DominoTile) => {
-    if (!isCurrentPlayer) return;
+    console.log('🎯 CLICK EN FICHA:', {
+      tile: `${tile.left}-${tile.right}`,
+      isCurrentPlayer,
+      availableMovesCount: availableMoves.length
+    });
+
+    if (!isCurrentPlayer) {
+      console.log('❌ No es tu turno, click ignorado');
+      return;
+    }
     
+    // VALIDACIÓN ESTRICTA: Solo fichas jugables
     const move = availableMoves.find(m => m.tile.id === tile.id);
-    if (!move) return;
-
-    console.log('Tile clicked:', tile.id, 'Available sides:', move.sides);
-
-    // Determinar automáticamente el lado correcto según las reglas del dominó
-    const bestSide = determineBestSide(move.sides);
-    
-    setAnimatingTile(tile.id);
-    setTimeout(() => {
-      onTileSelect(tile, bestSide);
-      setAnimatingTile(null);
-    }, 300);
-  };
-
-  const determineBestSide = (availableSides: ('left' | 'right')[]): 'left' | 'right' => {
-    // Si solo hay un lado disponible, usarlo
-    if (availableSides.length === 1) {
-      return availableSides[0];
+    if (!move) {
+      console.log('❌ Ficha no jugable, click ignorado');
+      return;
     }
 
-    // Si ambos lados están disponibles, elegir el que haga mejor conexión
-    // Esto simula como un jugador real colocaría la ficha
-    
-    // Por simplicidad, si puede ir a ambos lados, preferir el lado derecho
-    // para que el juego fluya naturalmente hacia la derecha
-    if (availableSides.includes('right')) {
-      return 'right';
+    console.log('✅ Ficha válida encontrada:', move);
+
+    // Auto-determinar lado si solo hay uno disponible
+    if (move.sides.length === 1) {
+      const side = move.sides[0];
+      console.log(`🎯 Auto-seleccionando lado: ${side}`);
+      
+      setAnimatingTile(tile.id);
+      setTimeout(() => {
+        onTileSelect(tile, side);
+        setAnimatingTile(null);
+      }, 300);
+    } else {
+      // Mostrar selector de lado
+      console.log('🤔 Múltiples lados disponibles, mostrando selector');
+      setSelectedTile(tile);
     }
-    
-    return 'left';
   };
 
+  // CORREGIDO: Verificar si una ficha específica es jugable
   const isPlayable = (tile: DominoTile) => {
-    return isCurrentPlayer && availableMoves.some(m => m.tile.id === tile.id);
+    if (!isCurrentPlayer) return false;
+    return availableMoves.some(m => m.tile.id === tile.id);
   };
 
   const getHandStyle = () => {
@@ -100,28 +104,47 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
     rotation: 0 as const 
   }));
 
-  const isPlayerBlocked = !showTiles && isCurrentPlayer && availableMoves.length === 0;
+  // CORREGIDO: Determinar si el jugador está bloqueado
+  const isPlayerBlocked = isCurrentPlayer && availableMoves.length === 0;
+  const hasPlayableTiles = isCurrentPlayer && availableMoves.length > 0;
 
   return (
     <div className={getContainerStyle()}>
+      {/* Información del jugador mejorada */}
       <div className="text-center mb-2">
         <div className={`
-          bg-white/20 backdrop-blur-lg rounded-lg px-3 py-1 border border-white/30
-          ${isCurrentPlayer ? 'bg-yellow-500/30 border-yellow-400' : ''}
-          ${isPlayerBlocked ? 'bg-red-500/30 border-red-400' : ''}
+          bg-white/20 backdrop-blur-lg rounded-lg px-3 py-2 border transition-all duration-300
+          ${isCurrentPlayer && hasPlayableTiles ? 'bg-green-500/30 border-green-400 animate-pulse' : ''}
+          ${isPlayerBlocked ? 'bg-red-500/30 border-red-400' : 'border-white/30'}
         `}>
-          <span className="text-white font-semibold text-sm">{playerName}</span>
-          <span className="text-gray-300 text-xs ml-2">({displayedTiles.length})</span>
-          {isCurrentPlayer && (
-            <span className="text-yellow-300 text-xs ml-2">Tu turno</span>
-          )}
-          {isPlayerBlocked && (
-            <span className="text-red-300 text-xs ml-2">BLOQUEADO</span>
-          )}
+          <div className="flex items-center space-x-2">
+            <span className="text-white font-semibold text-sm">{playerName}</span>
+            <span className="text-gray-300 text-xs">({displayedTiles.length})</span>
+          </div>
+          
+          {/* Estado del jugador */}
+          <div className="text-xs mt-1">
+            {isCurrentPlayer && hasPlayableTiles && (
+              <span className="text-green-300 flex items-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
+                Tu turno - {availableMoves.length} jugada{availableMoves.length !== 1 ? 's' : ''}
+              </span>
+            )}
+            {isPlayerBlocked && (
+              <span className="text-red-300 flex items-center">
+                <span className="w-2 h-2 bg-red-400 rounded-full mr-1"></span>
+                BLOQUEADO
+              </span>
+            )}
+            {!isCurrentPlayer && (
+              <span className="text-gray-400">Esperando turno</span>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className={`flex ${getHandStyle()} gap-1 max-w-96`}>
+      {/* Contenedor de fichas con espaciado mejorado */}
+      <div className={`flex ${getHandStyle()} gap-2 max-w-96 p-2`}>
         {displayedTiles.map((tile, index) => (
           <div 
             key={tile.id || `tile-${index}`}
@@ -136,7 +159,11 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                 isSelected={selectedTile?.id === tile.id}
                 onClick={() => handleTileClick(tile)}
                 size="medium"
-                className={isPlayable(tile) ? 'hover:scale-105 hover:shadow-xl cursor-pointer' : ''}
+                className={`
+                  ${isPlayable(tile) ? 'hover:scale-105 hover:shadow-xl' : ''}
+                  ${!isPlayable(tile) && isCurrentPlayer ? 'opacity-50' : ''}
+                  transition-all duration-200
+                `}
               />
             ) : (
               <DominoTileComponent
@@ -149,43 +176,63 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
         ))}
       </div>
 
+      {/* CORREGIDO: Selector de lado mejorado */}
       {selectedTile && (
-        <div className="absolute z-50 bg-black/80 backdrop-blur-lg rounded-lg p-4 border border-white/30 mt-2">
-          <p className="text-white text-sm mb-3">¿En qué lado colocar la ficha?</p>
-          <div className="flex gap-2">
+        <div className="absolute z-50 bg-black/90 backdrop-blur-lg rounded-lg p-4 border border-white/30 mt-2 shadow-2xl">
+          <p className="text-white text-sm mb-3 text-center">
+            Ficha {selectedTile.isDouble ? `Doble ${selectedTile.left}` : `${selectedTile.left}-${selectedTile.right}`}
+            <br />
+            <span className="text-gray-300">¿En qué extremo colocar?</span>
+          </p>
+          
+          <div className="flex gap-3 justify-center">
+            {availableMoves.find(m => m.tile.id === selectedTile.id)?.sides.map(side => (
+              <button
+                key={side}
+                onClick={() => {
+                  setAnimatingTile(selectedTile.id);
+                  setTimeout(() => {
+                    onTileSelect(selectedTile, side);
+                    setSelectedTile(null);
+                    setAnimatingTile(null);
+                  }, 300);
+                }}
+                className={`
+                  px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                  ${side === 'left' 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                  }
+                  hover:scale-105 shadow-lg
+                `}
+              >
+                {side === 'left' ? '← Izquierda' : 'Derecha →'}
+              </button>
+            ))}
+            
             <button
-              onClick={() => {
-                setAnimatingTile(selectedTile.id);
-                setTimeout(() => {
-                  onTileSelect(selectedTile, 'left');
-                  setSelectedTile(null);
-                  setAnimatingTile(null);
-                }, 300);
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+              onClick={() => setSelectedTile(null)}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:scale-105"
             >
-              Izquierda
-            </button>
-            <button
-              onClick={() => {
-                setAnimatingTile(selectedTile.id);
-                setTimeout(() => {
-                  onTileSelect(selectedTile, 'right');
-                  setSelectedTile(null);
-                  setAnimatingTile(null);
-                }, 300);
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
-            >
-              Derecha
-            </button>
-            <button
-              onClick={() => { setSelectedTile(null); }}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm"
-            >
-              Cancelar
+              ✕
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Debug de movimientos disponibles */}
+      {process.env.NODE_ENV === 'development' && isCurrentPlayer && (
+        <div className="absolute -bottom-20 left-0 bg-black/80 text-white p-2 rounded text-xs max-w-xs">
+          <div className="font-bold">Debug - Movimientos:</div>
+          {availableMoves.length === 0 ? (
+            <div className="text-red-300">❌ Sin movimientos válidos</div>
+          ) : (
+            availableMoves.map((move, i) => (
+              <div key={i} className="text-green-300">
+                ✅ {move.tile.left}-{move.tile.right} → {move.sides.join(', ')}
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
