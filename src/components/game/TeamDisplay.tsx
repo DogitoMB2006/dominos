@@ -32,7 +32,7 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({ team, players, teamName, colo
       </div>
 
       <div className="space-y-3 min-h-[120px]">
-        {players.map((player, index) => (
+        {players.map((player) => (
           <div
             key={player.uid}
             className={`bg-white/10 rounded-lg p-3 border ${

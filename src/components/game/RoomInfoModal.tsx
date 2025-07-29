@@ -11,7 +11,7 @@ const RoomInfoModal: React.FC<RoomInfoModalProps> = ({ isOpen, onClose, roomCode
   
   const roomLink = `${window.location.origin}/join/${roomCode}`;
 
-  const copyToClipboard = async (text: string, type: 'code' | 'link') => {
+  const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -36,7 +36,7 @@ const RoomInfoModal: React.FC<RoomInfoModalProps> = ({ isOpen, onClose, roomCode
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-gray-300">Código de Sala:</label>
               <button
-                onClick={() => copyToClipboard(roomCode, 'code')}
+                onClick={() => copyToClipboard(roomCode)}
                 className="text-blue-400 hover:text-blue-300 text-sm"
               >
                 {copied ? '✓ Copiado' : 'Copiar'}
@@ -51,7 +51,7 @@ const RoomInfoModal: React.FC<RoomInfoModalProps> = ({ isOpen, onClose, roomCode
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-gray-300">Link de Invitación:</label>
               <button
-                onClick={() => copyToClipboard(roomLink, 'link')}
+                onClick={() => copyToClipboard(roomLink)}
                 className="text-blue-400 hover:text-blue-300 text-sm"
               >
                 {copied ? '✓ Copiado' : 'Copiar'}

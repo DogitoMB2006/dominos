@@ -1,4 +1,3 @@
-import React from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
 import Router from './router/Router';

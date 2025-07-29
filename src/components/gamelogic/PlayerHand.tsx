@@ -35,7 +35,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
     console.log('Tile clicked:', tile.id, 'Available sides:', move.sides);
 
     // Determinar automáticamente el lado correcto según las reglas del dominó
-    const bestSide = determineBestSide(tile, move.sides);
+    const bestSide = determineBestSide(move.sides);
     
     setAnimatingTile(tile.id);
     setTimeout(() => {
@@ -44,7 +44,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
     }, 300);
   };
 
-  const determineBestSide = (tile: DominoTile, availableSides: ('left' | 'right')[]): 'left' | 'right' => {
+  const determineBestSide = (availableSides: ('left' | 'right')[]): 'left' | 'right' => {
     // Si solo hay un lado disponible, usarlo
     if (availableSides.length === 1) {
       return availableSides[0];
