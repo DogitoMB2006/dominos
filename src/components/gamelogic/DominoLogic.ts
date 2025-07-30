@@ -66,45 +66,35 @@ export class DominoGameLogic {
     return order;
   }
 
- 
   static canPlaceTile(tile: DominoTile, gameState: GameState): { canPlace: boolean, sides: ('left' | 'right')[] } {
-   
     if (gameState.placedTiles.length === 0) {
+      console.log('🎯 PRIMERA FICHA - siempre permitida');
       return { canPlace: true, sides: ['left'] };
     }
 
     const sides: ('left' | 'right')[] = [];
     const { leftEnd, rightEnd } = gameState;
 
-    console.log('🔍 VALIDACIÓN ESTRICTA:', {
+    console.log('🔍 VALIDACIÓN:', {
       tile: `${tile.left}-${tile.right}`,
       leftEnd,
-      rightEnd,
-      isDouble: tile.isDouble
+      rightEnd
     });
-
 
     if (tile.left === leftEnd || tile.right === leftEnd) {
       sides.push('left');
-      console.log('✅ VÁLIDA para extremo IZQUIERDO');
+      console.log('✅ PUEDE IR EN LADO IZQUIERDO');
     }
     
-
     if (tile.left === rightEnd || tile.right === rightEnd) {
       sides.push('right');
-      console.log('✅ VÁLIDA para extremo DERECHO');
+      console.log('✅ PUEDE IR EN LADO DERECHO');
     }
 
     const canPlace = sides.length > 0;
-    
-    if (!canPlace) {
-      console.log('❌ FICHA NO VÁLIDA - No conecta con ningún extremo');
-    }
-
-    console.log('📋 Resultado validación:', { canPlace, sides, leftEnd, rightEnd });
+    console.log('📋 RESULTADO:', { canPlace, sides });
     return { canPlace, sides };
   }
-
 
   static placeTile(
     tile: DominoTile, 
@@ -112,93 +102,69 @@ export class DominoGameLogic {
     gameState: GameState, 
     playerId: string
   ): { success: boolean, newGameState?: GameState, error?: string } {
-    console.log('🎲 INTENTANDO COLOCAR FICHA:', {
+    console.log('🎲 PLACE TILE DEBUG:', {
       tile: `${tile.left}-${tile.right}`,
-      tileId: tile.id,
       side,
-      player: playerId.substring(0, 8),
       leftEnd: gameState.leftEnd,
       rightEnd: gameState.rightEnd,
-      placedTilesCount: gameState.placedTiles.length,
-      currentPlayer: gameState.currentPlayer,
-      gameStarted: gameState.gameStarted
+      placedTilesCount: gameState.placedTiles.length
     });
 
     if (gameState.currentPlayer !== playerId) {
-      console.log('❌ No es el turno del jugador');
       return { success: false, error: 'No es tu turno' };
     }
 
-
     const playerHand = gameState.playerHands[playerId];
     if (!playerHand.some((t: DominoTile) => t.id === tile.id)) {
-      console.log('❌ Jugador no tiene la ficha');
       return { success: false, error: 'No tienes esta ficha' };
     }
 
+    if (gameState.placedTiles.length === 0) {
+      console.log('✅ PRIMERA FICHA - permitiendo colocación');
+    } else {
+      const canPlace = this.canPlaceTile(tile, gameState);
+      console.log('🔍 CAN PLACE RESULT:', canPlace);
+      
+      if (!canPlace.canPlace) {
+        return { success: false, error: 'Esta ficha no conecta con ningún extremo' };
+      }
 
-    const canPlace = this.canPlaceTile(tile, gameState);
-    if (!canPlace.canPlace) {
-      console.log('❌ Ficha no puede colocarse - No conecta');
-      return { success: false, error: 'Esta ficha no conecta con ningún extremo' };
-    }
-
-    if (!canPlace.sides.includes(side)) {
-      console.log('❌ Lado específico no válido');
-      return { success: false, error: `No puedes colocar esta ficha en el lado ${side}` };
-    }
-
-
-    const { leftEnd, rightEnd } = gameState;
-    const targetEnd = side === 'left' ? leftEnd : rightEnd;
-    
-    if (tile.left !== targetEnd && tile.right !== targetEnd) {
-      console.log('❌ Números no coinciden exactamente');
-      return { success: false, error: 'Los números deben coincidir exactamente' };
+      if (!canPlace.sides.includes(side)) {
+        return { success: false, error: `No puedes colocar esta ficha en el lado ${side}` };
+      }
     }
 
     const newGameState = { ...gameState };
     
- 
-    const placementResult = this.calculateProfessionalPlacement(tile, side, gameState);
+    const placement = this.calculateDominoPlacement(tile, side, gameState);
     
-   
     const placedTile: PlacedTile = {
       ...tile,
-      rotation: placementResult.rotation,
-      x: placementResult.x,
-      y: placementResult.y,
+      rotation: placement.rotation,
+      x: placement.x,
+      y: placement.y,
       connectedSide: side,
       placedBy: playerId
     };
 
-    console.log('✨ FICHA VÁLIDA COLOCADA:', {
-      id: placedTile.id,
-      rotation: placedTile.rotation,
-      position: { x: placedTile.x, y: placedTile.y },
-      newEnds: { left: placementResult.newLeftEnd, right: placementResult.newRightEnd }
-    });
-
-   
     if (side === 'left') {
       newGameState.placedTiles = [placedTile, ...gameState.placedTiles];
     } else {
       newGameState.placedTiles = [...gameState.placedTiles, placedTile];
     }
-  
+    
     newGameState.playerHands[playerId] = gameState.playerHands[playerId].filter(
       (t: DominoTile) => t.id !== tile.id
     );
-
-    newGameState.leftEnd = placementResult.newLeftEnd;
-    newGameState.rightEnd = placementResult.newRightEnd;
+    
+    newGameState.leftEnd = placement.newLeftEnd;
+    newGameState.rightEnd = placement.newRightEnd;
     newGameState.passCount = 0;
 
- 
     const logEntry: GameLogEntry = {
       playerId,
       action: 'place',
-      tile: { ...tile, rotation: placementResult.rotation },
+      tile: { ...tile, rotation: placement.rotation },
       timestamp: new Date()
     };
     newGameState.gameLog = [...gameState.gameLog, logEntry];
@@ -207,19 +173,15 @@ export class DominoGameLogic {
     const nextPlayerIndex = (currentPlayerIndex + 1) % gameState.playerOrder.length;
     newGameState.currentPlayer = gameState.playerOrder[nextPlayerIndex];
 
-
     if (newGameState.playerHands[playerId].length === 0) {
       newGameState.gameEnded = true;
       newGameState.winner = playerId;
-      console.log('🏆 ¡VICTORIA! Jugador sin fichas');
     }
 
-    console.log('✅ FICHA COLOCADA EXITOSAMENTE');
     return { success: true, newGameState };
   }
 
-
-  private static calculateProfessionalPlacement(
+  private static calculateDominoPlacement(
     tile: DominoTile, 
     side: 'left' | 'right', 
     gameState: GameState
@@ -231,16 +193,14 @@ export class DominoGameLogic {
     y: number 
   } {
     const { leftEnd, rightEnd, placedTiles } = gameState;
-    const targetEnd = side === 'left' ? leftEnd : rightEnd;
     
-    let rotation: 0 | 90 | 180 | 270 = 0;
-    let oppositeValue: number;
-
-  
     if (placedTiles.length === 0) {
-      rotation = tile.isDouble ? 90 : 0;
+      console.log('🎯 PRIMERA FICHA:', {
+        tile: `${tile.left}-${tile.right}`,
+        rotation: tile.isDouble ? 90 : 0
+      });
       return {
-        rotation,
+        rotation: tile.isDouble ? 90 : 0,
         newLeftEnd: tile.left,
         newRightEnd: tile.right,
         x: 0,
@@ -248,112 +208,115 @@ export class DominoGameLogic {
       };
     }
 
+    const targetEnd = side === 'left' ? leftEnd : rightEnd;
+    let rotation: 0 | 90 | 180 | 270 = 0;
+    let freeValue: number;
+
+    console.log('🔧 CALCULANDO POSICIÓN:', {
+      tile: `${tile.left}-${tile.right}`,
+      side,
+      targetEnd,
+      isDouble: tile.isDouble
+    });
 
     if (tile.isDouble) {
       rotation = 90;
-      oppositeValue = tile.left;
+      freeValue = tile.left;
+      console.log('🔄 FICHA DOBLE - rotación 90°');
     } else {
-  
       if (tile.left === targetEnd) {
+        freeValue = tile.right;
         rotation = side === 'left' ? 180 : 0;
-        oppositeValue = tile.right;
+        console.log(`🔄 CONECTA POR IZQUIERDA (${tile.left}) - extremo libre: ${freeValue}`);
       } else if (tile.right === targetEnd) {
+        freeValue = tile.left;
         rotation = side === 'left' ? 0 : 180;
-        oppositeValue = tile.left;
+        console.log(`🔄 CONECTA POR DERECHA (${tile.right}) - extremo libre: ${freeValue}`);
       } else {
-       
-        console.warn('⚠️ Conexión inesperada en calculateProfessionalPlacement');
+        console.log('⚠️ NO HAY CONEXIÓN VÁLIDA');
+        freeValue = tile.right;
         rotation = 0;
-        oppositeValue = tile.right;
       }
     }
 
+    const layout = this.calculateLinearLayout(placedTiles, side, tile.isDouble);
 
     let newLeftEnd = leftEnd;
     let newRightEnd = rightEnd;
     
     if (side === 'left') {
-      newLeftEnd = oppositeValue;
+      newLeftEnd = freeValue;
     } else {
-      newRightEnd = oppositeValue;
+      newRightEnd = freeValue;
     }
 
-
-    const position = this.calculateIntelligentPosition(tile, side, placedTiles.length, rotation);
+    console.log('📍 RESULTADO POSICIÓN:', {
+      position: { x: layout.x, y: layout.y },
+      rotation,
+      newEnds: { left: newLeftEnd, right: newRightEnd }
+    });
 
     return { 
       rotation, 
       newLeftEnd, 
       newRightEnd,
-      x: position.x,
-      y: position.y 
+      x: layout.x,
+      y: layout.y 
     };
   }
 
-
-  private static calculateIntelligentPosition(
-    tile: DominoTile, 
-    side: 'left' | 'right', 
-    tileCount: number, 
-    rotation: number
+  private static calculateLinearLayout(
+    placedTiles: PlacedTile[],
+    side: 'left' | 'right',
+    isDouble: boolean
   ): { x: number, y: number } {
-    
-    const TILE_SPACING = 70;
-    const ROW_HEIGHT = 130; 
-    const MAX_WIDTH = 450; 
+    const TILE_WIDTH = 48;
+    const TILE_HEIGHT = 96;
+    const SPACING = 8;
+    const MAX_ROW_WIDTH = 500;
 
-    let baseX = 0;
-    let baseY = 0;
+    if (placedTiles.length === 0) {
+      return { x: 0, y: 0 };
+    }
 
+    let currentX = 0;
+    let currentY = 0;
+    let currentRowWidth = 0;
 
     if (side === 'left') {
-      baseX = -(tileCount * TILE_SPACING) / 2;
+      currentX = -(placedTiles.length * (TILE_WIDTH + SPACING));
+      currentRowWidth = Math.abs(currentX);
     } else {
-      baseX = (tileCount * TILE_SPACING) / 2;
+      currentX = placedTiles.length * (TILE_WIDTH + SPACING);
+      currentRowWidth = currentX;
     }
 
-    if (Math.abs(baseX) > MAX_WIDTH) {
-      const row = Math.floor(Math.abs(baseX) / MAX_WIDTH);
-      baseY = row * ROW_HEIGHT * (side === 'left' ? -1 : 1);
-      baseX = (baseX % MAX_WIDTH) * (baseX < 0 ? -1 : 1);
+    if (currentRowWidth > MAX_ROW_WIDTH) {
+      const rowNumber = Math.floor(currentRowWidth / MAX_ROW_WIDTH);
+      currentY = rowNumber * (TILE_HEIGHT + SPACING * 2) * (side === 'left' ? -1 : 1);
+      currentX = (currentX % MAX_ROW_WIDTH) * (side === 'left' ? -1 : 1);
     }
 
- 
-    const naturalVariation = tile.isDouble ? 3 : 8;
-    const randomOffset = (Math.random() - 0.5) * naturalVariation;
-    
-    if (rotation === 90 || rotation === 270) {
-      baseY += randomOffset * 0.3;
-    } else {
-      baseX += randomOffset;
+    if (isDouble) {
+      currentY += side === 'left' ? -20 : 20;
     }
 
-    console.log('📍 Posición calculada:', { 
-      side, 
-      tileCount, 
-      position: { x: baseX, y: baseY },
-      rotation 
-    });
-
-    return { x: baseX, y: baseY };
+    return { x: currentX, y: currentY };
   }
-
 
   static playerCanPlay(playerId: string, gameState: GameState): boolean {
     const hand = gameState.playerHands[playerId];
     
     if (gameState.placedTiles.length === 0) return true;
-   
+    
     const canPlay = hand.some((tile: DominoTile) => {
       const canPlace = this.canPlaceTile(tile, gameState);
       return canPlace.canPlace;
     });
 
-    console.log(`🎮 Jugador ${playerId.substring(0, 8)} puede jugar:`, canPlay);
     return canPlay;
   }
 
- 
   static getAvailableMoves(playerId: string, gameState: GameState): { tile: DominoTile, sides: ('left' | 'right')[] }[] {
     const hand = gameState.playerHands[playerId];
     const moves: { tile: DominoTile, sides: ('left' | 'right')[] }[] = [];
@@ -365,19 +328,10 @@ export class DominoGameLogic {
       }
     });
     
-    console.log(`🎯 Movimientos VÁLIDOS para ${playerId.substring(0, 8)}:`, moves.length);
-    
-
-    moves.forEach(move => {
-      console.log(`  - ${move.tile.left}-${move.tile.right} en lados: ${move.sides.join(', ')}`);
-    });
-    
     return moves;
   }
 
   static passPlayer(playerId: string, gameState: GameState): GameState {
-    console.log(`🚫 Jugador ${playerId.substring(0, 8)} pasa turno`);
-    
     const newGameState = { ...gameState };
     newGameState.passCount += 1;
     
@@ -394,7 +348,6 @@ export class DominoGameLogic {
     if (newGameState.passCount >= gameState.playerOrder.length) {
       newGameState.gameEnded = true;
       newGameState.winner = this.calculateBlockedGameWinner(newGameState);
-      console.log('🚫 JUEGO BLOQUEADO - Determinando ganador');
     }
 
     return newGameState;
@@ -406,7 +359,6 @@ export class DominoGameLogic {
     
     Object.entries(gameState.playerHands).forEach(([playerId, hand]) => {
       const points = hand.reduce((sum: number, tile: DominoTile) => sum + tile.left + tile.right, 0);
-      console.log(`🔢 Jugador ${playerId.substring(0, 8)}: ${points} puntos`);
       
       if (points < minPoints) {
         minPoints = points;
@@ -414,7 +366,6 @@ export class DominoGameLogic {
       }
     });
     
-    console.log(`🏆 Ganador por bloqueo: ${winner.substring(0, 8)} con ${minPoints} puntos`);
     return winner;
   }
 }
