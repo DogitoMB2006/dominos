@@ -110,7 +110,6 @@ const GameTable: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 relative overflow-hidden">
-      {/* Game Header */}
       <div className="absolute top-0 left-0 right-0 z-20 bg-black/30 backdrop-blur-lg border-b border-white/20">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -146,9 +145,7 @@ const GameTable: React.FC = () => {
         </div>
       </div>
 
-      {/* Game Area */}
       <div className="absolute inset-0 pt-16">
-        {/* Current Player Turn Indicator */}
         {isCurrentPlayer && (
           <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30">
             <div className="bg-green-600/90 text-white px-6 py-3 rounded-lg text-lg font-bold animate-pulse">
@@ -157,7 +154,6 @@ const GameTable: React.FC = () => {
           </div>
         )}
 
-        {/* All Player Hands */}
         {playerPositions.map((position: PlayerPosition) => {
           const isCurrentUserHand = position.playerId === userData.uid;
           return (
@@ -175,7 +171,6 @@ const GameTable: React.FC = () => {
           );
         })}
 
-        {/* Debug Info for All Players */}
         <div className="absolute top-4 left-4 bg-black/60 text-white p-3 rounded-lg text-xs z-30 max-w-xs">
           <div className="mb-2 font-bold">Estado del Juego:</div>
           <div>Jugador actual: {playerPositions.find((p: PlayerPosition) => p.isCurrentPlayer)?.username || 'N/A'}</div>
@@ -201,7 +196,6 @@ const GameTable: React.FC = () => {
           )}
         </div>
 
-        {/* Team Score Display */}
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
           <div className="bg-black/50 backdrop-blur-lg rounded-lg px-6 py-3 border border-white/20">
             <div className="flex items-center space-x-8 text-white">
@@ -222,7 +216,6 @@ const GameTable: React.FC = () => {
           </div>
         </div>
 
-        {/* Game Board in Center */}
         <div className="absolute inset-0 flex items-center justify-center p-32">
           <div className="w-full max-w-4xl h-full max-h-96">
             <GameBoard
@@ -233,7 +226,6 @@ const GameTable: React.FC = () => {
           </div>
         </div>
 
-        {/* Current Player Indicator */}
         {!isCurrentPlayer && (
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20">
             <div className="bg-yellow-600/80 text-white px-4 py-2 rounded-lg text-sm font-semibold">
@@ -242,7 +234,6 @@ const GameTable: React.FC = () => {
           </div>
         )}
 
-        {/* Game Log */}
         <div className="absolute top-20 right-4 w-64 max-h-96 overflow-y-auto bg-black/40 backdrop-blur-lg rounded-lg border border-white/20 p-3 z-20">
           <h3 className="text-white font-semibold mb-2 text-sm">Historial del Juego</h3>
           <div className="space-y-1">
@@ -265,7 +256,6 @@ const GameTable: React.FC = () => {
         </div>
       </div>
 
-      {/* Winner Modal */}
       {getWinnerMessage()}
     </div>
   );

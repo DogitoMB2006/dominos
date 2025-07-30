@@ -21,19 +21,16 @@ interface AdvancedTilePosition {
 class AntiOverlapDominoLayout {
   private static readonly TILE_WIDTH = 48;
   private static readonly TILE_HEIGHT = 96;
-  private static readonly SPACING = 16; // Espaciado aumentado para evitar solapamientos
+  private static readonly SPACING = 16;
   private static readonly MAX_WIDTH = 480;
-  private static readonly MIN_DISTANCE = 60; // Distancia mínima entre fichas
 
   static calculateAntiOverlapLayout(placedTiles: PlacedTile[]): Map<string, AdvancedTilePosition> {
     const positions = new Map<string, AdvancedTilePosition>();
-    const occupiedPositions = new Set<string>(); // Para rastrear posiciones ocupadas
+    const occupiedPositions = new Set<string>();
     
     if (placedTiles.length === 0) return positions;
 
-    // FICHA INICIAL - siempre centrada
     const firstTile = placedTiles[0];
-    const initialPosition = { x: 0, y: 0 };
     
     positions.set(firstTile.id, {
       x: 0,
@@ -45,7 +42,6 @@ class AntiOverlapDominoLayout {
       connectedTo: null
     });
     
-    // Marcar posición inicial como ocupada
     occupiedPositions.add(this.positionKey(0, 0));
 
     let currentX = 0;
@@ -53,11 +49,9 @@ class AntiOverlapDominoLayout {
     let currentFlow: 'right' | 'left' | 'down' | 'up' = 'right';
     let leftmostX = 0;
     let rightmostX = 0;
-    let lastDirection = 'right';
 
     console.log('🎯 Iniciando layout anti-solapamiento...');
 
-    // Procesar fichas secuencialmente
     for (let i = 1; i < placedTiles.length; i++) {
       const tile = placedTiles[i];
       const previousTile = placedTiles[i - 1];
@@ -71,12 +65,9 @@ class AntiOverlapDominoLayout {
         currentFlow,
         leftmostX,
         rightmostX,
-        lastDirection,
-        occupiedPositions,
-        i
+        occupiedPositions
       );
 
-      // Verificar si la posición está ocupada y ajustar si es necesario
       const safePosition = this.ensureNoOverlap(newPosition, occupiedPositions, tile.id);
 
       positions.set(tile.id, {
@@ -89,14 +80,11 @@ class AntiOverlapDominoLayout {
         connectedTo: previousTile.id
       });
 
-      // Marcar nueva posición como ocupada
       occupiedPositions.add(this.positionKey(safePosition.x, safePosition.y));
 
-      // Actualizar tracking
       currentX = safePosition.x;
       currentY = safePosition.y;
       currentFlow = safePosition.flowDirection;
-      lastDirection = safePosition.flowDirection;
       
       if (safePosition.x < leftmostX) leftmostX = safePosition.x;
       if (safePosition.x > rightmostX) rightmostX = safePosition.x;
@@ -104,7 +92,6 @@ class AntiOverlapDominoLayout {
       console.log(`✅ Ficha ${i} colocada en:`, safePosition);
     }
 
-    // Debug: verificar solapamientos
     this.debugOverlaps(positions);
 
     return positions;
@@ -117,9 +104,7 @@ class AntiOverlapDominoLayout {
     currentFlow: 'right' | 'left' | 'down' | 'up',
     leftmostX: number,
     rightmostX: number,
-    lastDirection: string,
-    occupiedPositions: Set<string>,
-    index: number
+    occupiedPositions: Set<string>
   ): {
     x: number,
     y: number,
@@ -138,13 +123,11 @@ class AntiOverlapDominoLayout {
     const spacing = this.SPACING;
     const tileLength = this.TILE_WIDTH;
 
-    // REGLA 1: Fichas dobles SIEMPRE perpendiculares
     if (tile.isDouble) {
       rotation = 90;
       direction = 'vertical';
     }
 
-    // REGLA 2: Calcular posición según flujo y lado
     switch (currentFlow) {
       case 'right':
         if (side === 'right') {
@@ -187,12 +170,10 @@ class AntiOverlapDominoLayout {
         break;
     }
 
-    // REGLA 3: Detectar límites y cambiar dirección (CORREGIDO)
     if (Math.abs(newX) > this.MAX_WIDTH / 2) {
       console.log(`📐 Límite alcanzado en X: ${newX}, cambiando dirección...`);
       
       if (currentFlow === 'right') {
-        // Curva hacia abajo
         newX = Math.min(rightmostX, this.MAX_WIDTH / 2 - 20);
         newY = currentY + this.TILE_HEIGHT + spacing * 2;
         newFlow = 'down';
@@ -200,7 +181,6 @@ class AntiOverlapDominoLayout {
         direction = 'vertical';
         console.log('🔄 Girando de RIGHT a DOWN');
       } else if (currentFlow === 'left') {
-        // Curva hacia arriba
         newX = Math.max(leftmostX, -this.MAX_WIDTH / 2 + 20);
         newY = currentY - this.TILE_HEIGHT - spacing * 2;
         newFlow = 'up';
@@ -210,7 +190,6 @@ class AntiOverlapDominoLayout {
       }
     }
 
-    // REGLA 4: Ajustar rotación según dirección final
     if (!tile.isDouble) {
       switch (newFlow) {
         case 'right':
@@ -240,9 +219,7 @@ class AntiOverlapDominoLayout {
     };
   }
 
-  /**
-   * NUEVO: Asegurar que no hay solapamientos
-   */
+
   private static ensureNoOverlap(
     position: { x: number, y: number, rotation: number, direction: 'horizontal' | 'vertical', flowDirection: 'right' | 'left' | 'down' | 'up' },
     occupiedPositions: Set<string>,
@@ -254,11 +231,10 @@ class AntiOverlapDominoLayout {
     let newY = position.y;
     const maxAttempts = 10;
 
-    // Verificar si la posición está ocupada
     while (occupiedPositions.has(this.positionKey(newX, newY)) && attempts < maxAttempts) {
       attempts++;
       
-      // Ajustar posición según la dirección
+
       switch (position.flowDirection) {
         case 'right':
           newX += this.SPACING;
@@ -288,19 +264,15 @@ class AntiOverlapDominoLayout {
     };
   }
 
-  /**
-   * NUEVO: Generar clave única para posición
-   */
+
   private static positionKey(x: number, y: number): string {
-    // Redondear a cuadrícula de 20px para evitar microsolapamientos
+   
     const gridX = Math.round(x / 20) * 20;
     const gridY = Math.round(y / 20) * 20;
     return `${gridX},${gridY}`;
   }
 
-  /**
-   * NUEVO: Debug de solapamientos
-   */
+
   private static debugOverlaps(positions: Map<string, AdvancedTilePosition>): void {
     const positionCounts = new Map<string, string[]>();
     
@@ -312,7 +284,7 @@ class AntiOverlapDominoLayout {
       positionCounts.get(key)!.push(tileId);
     }
 
-    // Reportar solapamientos
+   
     for (const [posKey, tileIds] of positionCounts) {
       if (tileIds.length > 1) {
         console.warn(`🚨 SOLAPAMIENTO detectado en posición ${posKey}:`, tileIds);
@@ -366,19 +338,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
     );
   }
 
-  // Calcular layout sin solapamientos
   const tilePositions = AntiOverlapDominoLayout.calculateAntiOverlapLayout(placedTiles);
   const bounds = AntiOverlapDominoLayout.calculateLayoutBounds(tilePositions);
   
-  // Dimensiones responsivas
+
   const containerWidth = Math.max(900, bounds.width + 400);
   const containerHeight = Math.max(600, bounds.height + 400);
   
-  // Centrado automático
+
   const centerOffsetX = -bounds.minX - bounds.width / 2;
   const centerOffsetY = -bounds.minY - bounds.height / 2;
 
-  // Función para obtener clase de rotación
+
   const getRotationClass = (rotation: number): string => {
     switch (rotation) {
       case 90: return 'rotate-90';
@@ -390,14 +361,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
 
   return (
     <div className="relative w-full h-full min-h-96 bg-gradient-to-br from-green-800/30 via-green-700/20 to-emerald-900/30 rounded-2xl border-2 border-green-600/50 overflow-hidden shadow-2xl">
-      {/* Textura de mesa profesional */}
+
       <div className="absolute inset-0 opacity-20">
         <div className="w-full h-full bg-gradient-to-br from-green-700/30 via-green-600/15 to-green-800/30"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:50px_50px]"></div>
         <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.02)_25%,transparent_25%,transparent_75%,rgba(0,0,0,0.02)_75%)] bg-[length:100px_100px]"></div>
       </div>
       
-      {/* Área de juego con scroll profesional */}
+
       <div 
         className="relative w-full h-full overflow-auto scrollbar-thin scrollbar-track-green-800/20 scrollbar-thumb-green-600/40"
         style={{ 
@@ -405,7 +376,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
           minHeight: `${Math.min(containerHeight, window.innerHeight - 250)}px`
         }}
       >
-        {/* Contenedor del juego de dominó */}
+    
         <div 
           className="absolute"
           style={{ 
@@ -414,7 +385,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
             transform: `translate(${centerOffsetX}px, ${centerOffsetY}px)`
           }}
         >
-          {/* SVG para líneas de conexión mejoradas */}
+        
           {placedTiles.length > 1 && (
             <svg
               className="absolute pointer-events-none"
@@ -426,7 +397,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
                 zIndex: 50
               }}
             >
-              {placedTiles.slice(1).map((tile, index) => {
+              {placedTiles.slice(1).map((tile, tileIndex) => {
                 const currentPos = tilePositions.get(tile.id);
                 const connectedId = currentPos?.connectedTo;
                 const connectedPos = connectedId ? tilePositions.get(connectedId) : null;
@@ -434,8 +405,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
                 if (!currentPos || !connectedPos) return null;
                 
                 return (
-                  <g key={`connection-${index}`}>
-                    {/* Línea principal de conexión */}
+                  <g key={`connection-${tileIndex}`}>
+                  
                     <line
                       x1={connectedPos.x + bounds.width/2 + 100}
                       y1={connectedPos.y + bounds.height/2 + 100}
@@ -446,7 +417,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
                       strokeDasharray="8,4"
                       className="animate-pulse"
                     />
-                    {/* Sombra de conexión */}
+                
                     <line
                       x1={connectedPos.x + bounds.width/2 + 101}
                       y1={connectedPos.y + bounds.height/2 + 101}
@@ -462,8 +433,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
             </svg>
           )}
 
-          {/* Renderizar fichas sin solapamientos */}
-          {placedTiles.map((tile, index) => {
+          
+          {placedTiles.map((tile, tileIndex) => {
             const position = tilePositions.get(tile.id);
             if (!position) return null;
 
@@ -471,16 +442,16 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
 
             return (
               <div
-                key={`no-overlap-domino-${tile.id}-${index}`}
+                key={`no-overlap-domino-${tile.id}-${tileIndex}`}
                 className="absolute transition-all duration-700 ease-out hover:z-50 group"
                 style={{
                   left: `${position.x}px`,
                   top: `${position.y}px`,
                   transform: 'translate(-50%, -50%)',
-                  zIndex: position.isInitial ? 300 : 200 + index,
+                  zIndex: position.isInitial ? 300 : 200 + tileIndex,
                 }}
               >
-                {/* Contenedor de la ficha con rotación y espaciado anti-solapamiento */}
+              
                 <div 
                   className={`
                     ${rotationClass} transition-all duration-500 ease-out mx-2
@@ -493,7 +464,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
                       : 'drop-shadow(0 6px 12px rgba(0,0,0,0.4))'
                   }}
                 >
-                  {/* Borde especial para ficha inicial */}
+           
                   {position.isInitial && (
                     <div className="absolute inset-0 border-4 border-yellow-400 rounded-lg animate-pulse shadow-xl -z-10"></div>
                   )}
@@ -510,31 +481,31 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
                   />
                 </div>
                 
-                {/* Indicadores mejorados con mejor espaciado */}
+               
                 <div className="absolute -top-4 -right-3 bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs rounded-full w-7 h-7 flex items-center justify-center font-bold shadow-lg border-2 border-white z-20">
-                  {index + 1}
+                  {tileIndex + 1}
                 </div>
 
-                {/* Etiqueta de jugador */}
+             
                 <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded-full shadow-lg z-20">
                   {tile.placedBy.substring(0, 3)}
                 </div>
 
-                {/* Marcador especial de ficha inicial */}
+           
                 {position.isInitial && (
                   <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black text-xs px-3 py-1 rounded-full font-bold shadow-lg animate-bounce z-20">
                     ⭐ INICIO
                   </div>
                 )}
 
-                {/* Indicador de ficha doble con mejor visibilidad */}
+               
                 {tile.isDouble && (
                   <div className="absolute top-1 right-1 w-3 h-3 bg-gradient-to-br from-red-400 to-red-600 rounded-full border-2 border-white shadow-lg z-20">
                     <div className="w-full h-full rounded-full bg-white/30 animate-pulse"></div>
                   </div>
                 )}
 
-                {/* Indicador de dirección de flujo para debug */}
+                
                 {process.env.NODE_ENV === 'development' && (
                   <div className={`
                     absolute -top-1 -left-1 w-2 h-2 rounded-full z-20 border border-white shadow-sm
@@ -550,7 +521,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
         </div>
       </div>
 
-      {/* Panel de información mejorado */}
+ 
       <div className="absolute top-3 left-3 lg:top-4 lg:left-4 bg-black/80 backdrop-blur-lg text-white p-4 rounded-xl border border-white/30 shadow-2xl max-w-64">
         <h3 className="font-bold mb-3 text-sm lg:text-base flex items-center">
           <span className="mr-2 text-lg">📊</span>
@@ -581,7 +552,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
         </div>
       </div>
 
-      {/* Indicadores de extremos flotantes */}
+   
       {placedTiles.length > 0 && (
         <div className="absolute top-3 right-3 lg:top-4 lg:right-4 space-y-2">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg border border-blue-400/50 animate-pulse">
@@ -593,7 +564,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
         </div>
       )}
 
-      {/* Barra de progreso profesional */}
+   
       <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 lg:bottom-4 bg-black/80 backdrop-blur-lg text-white px-6 py-4 rounded-xl border border-white/30 shadow-2xl">
         <div className="flex items-center space-x-4 text-sm lg:text-base">
           <span className="text-3xl">🎲</span>
@@ -612,7 +583,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ placedTiles, leftEnd, rightEnd })
         </div>
       </div>
 
-      {/* Estilos CSS */}
+ 
       <style>{`
         .scrollbar-thin::-webkit-scrollbar {
           width: 8px;

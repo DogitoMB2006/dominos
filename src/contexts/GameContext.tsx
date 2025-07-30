@@ -72,7 +72,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       await setDoc(doc(db, 'gameRooms', roomId), newRoom);
 
-      // Set up room listener
+
       onSnapshot(doc(db, 'gameRooms', roomId), (docSnapshot) => {
         if (docSnapshot.exists()) {
           const roomData = docSnapshot.data() as GameRoom;
@@ -138,7 +138,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         teams: updatedTeams
       });
 
-      // Set up room listener after joining
+
       onSnapshot(doc(db, 'gameRooms', roomId), (docSnapshot) => {
         if (docSnapshot.exists()) {
           const roomData = docSnapshot.data() as GameRoom;
@@ -172,7 +172,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await deleteDoc(doc(db, 'gameStates', currentRoom.id));
         }
       } else {
-        // Update room with remaining players
+     
         let newHost = currentRoom.host;
         if (currentRoom.host === userData.uid && updatedPlayers.length > 0) {
           newHost = updatedPlayers[0].uid;
@@ -256,12 +256,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
 
-      // Update room status to playing
       await updateDoc(doc(db, 'gameRooms', currentRoom.id), {
         status: 'playing'
       });
 
-      // Create initial game state
+    
       const allTiles = DominoGameLogic.createFullSet();
       const playerIds = currentRoom.players.map((p: Player) => p.uid);
       const hands = DominoGameLogic.distributeHands(allTiles, playerIds);
@@ -309,7 +308,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Verificar si el jugador puede jugar
     if (!DominoGameLogic.playerCanPlay(userData.uid, gameState)) {
       console.log('Player cannot play, auto-passing...');
       await passMove();
@@ -328,7 +326,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Determinar equipo ganador si hay victoria
       if (result.newGameState && result.newGameState.gameEnded && result.newGameState.winner && currentRoom) {
         const winnerPlayer = currentRoom.players.find((p: Player) => p.uid === result.newGameState!.winner);
         if (winnerPlayer) {
@@ -399,7 +396,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return positions;
   };
 
-  // Set up game state listener when room status changes to playing
   useEffect(() => {
     if (currentRoom?.status === 'playing' && currentRoom.id) {
       const gameUnsubscribe = onSnapshot(doc(db, 'gameStates', currentRoom.id), (gameDoc) => {

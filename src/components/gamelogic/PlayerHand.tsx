@@ -38,7 +38,6 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
       return;
     }
     
-    // VALIDACIÓN ESTRICTA: Solo fichas jugables
     const move = availableMoves.find(m => m.tile.id === tile.id);
     if (!move) {
       console.log('❌ Ficha no jugable, click ignorado');
@@ -47,7 +46,6 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
 
     console.log('✅ Ficha válida encontrada:', move);
 
-    // Auto-determinar lado si solo hay uno disponible
     if (move.sides.length === 1) {
       const side = move.sides[0];
       console.log(`🎯 Auto-seleccionando lado: ${side}`);
@@ -58,13 +56,12 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
         setAnimatingTile(null);
       }, 300);
     } else {
-      // Mostrar selector de lado
       console.log('🤔 Múltiples lados disponibles, mostrando selector');
       setSelectedTile(tile);
     }
   };
 
-  // CORREGIDO: Verificar si una ficha específica es jugable
+
   const isPlayable = (tile: DominoTile) => {
     if (!isCurrentPlayer) return false;
     return availableMoves.some(m => m.tile.id === tile.id);
@@ -104,13 +101,13 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
     rotation: 0 as const 
   }));
 
-  // CORREGIDO: Determinar si el jugador está bloqueado
+
   const isPlayerBlocked = isCurrentPlayer && availableMoves.length === 0;
   const hasPlayableTiles = isCurrentPlayer && availableMoves.length > 0;
 
   return (
     <div className={getContainerStyle()}>
-      {/* Información del jugador mejorada */}
+   
       <div className="text-center mb-2">
         <div className={`
           bg-white/20 backdrop-blur-lg rounded-lg px-3 py-2 border transition-all duration-300
@@ -122,7 +119,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
             <span className="text-gray-300 text-xs">({displayedTiles.length})</span>
           </div>
           
-          {/* Estado del jugador */}
+   
           <div className="text-xs mt-1">
             {isCurrentPlayer && hasPlayableTiles && (
               <span className="text-green-300 flex items-center">
@@ -143,7 +140,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
         </div>
       </div>
 
-      {/* Contenedor de fichas con espaciado mejorado */}
+     
       <div className={`flex ${getHandStyle()} gap-2 max-w-96 p-2`}>
         {displayedTiles.map((tile, index) => (
           <div 
@@ -176,7 +173,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
         ))}
       </div>
 
-      {/* CORREGIDO: Selector de lado mejorado */}
+
       {selectedTile && (
         <div className="absolute z-50 bg-black/90 backdrop-blur-lg rounded-lg p-4 border border-white/30 mt-2 shadow-2xl">
           <p className="text-white text-sm mb-3 text-center">
@@ -220,7 +217,6 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
         </div>
       )}
 
-      {/* Debug de movimientos disponibles */}
       {process.env.NODE_ENV === 'development' && isCurrentPlayer && (
         <div className="absolute -bottom-20 left-0 bg-black/80 text-white p-2 rounded text-xs max-w-xs">
           <div className="font-bold">Debug - Movimientos:</div>
